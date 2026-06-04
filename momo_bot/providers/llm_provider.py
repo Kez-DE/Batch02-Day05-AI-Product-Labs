@@ -10,7 +10,7 @@ class UniversalProvider:
         if os.getenv("OPENAI_API_KEY"):
             self.models.append("gpt-4o-mini")
         if os.getenv("GEMINI_API_KEY"):
-            self.models.append("gemini/gemini-1.5-flash")
+            self.models.append("gemini/gemini-2.5-flash")
             
     def generate_response(self, messages: list, tools: list = None):
         """

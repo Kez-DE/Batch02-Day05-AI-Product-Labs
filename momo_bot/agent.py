@@ -25,20 +25,26 @@ class MoniAgent:
         """
         try:
             self.messages.append({"role": "user", "content": user_message})
-            
-            response = self.provider.generate_response(
-                messages=self.messages,
-                tools=self.tools
-            )
-            
-            choice = response.choices[0]
-            message = choice.message
-            
-            # Lưu lại phản hồi của AI vào lịch sử
-            self.messages.append(message)
-            
-            # Kiểm tra xem LLM có yêu cầu gọi tool nào không
-            if message.tool_calls:
+
+            function_map = {tool.__name__: tool for tool in AGENT_TOOLS}
+
+            for _ in range(5):
+                response = self.provider.generate_response(
+                    messages=self.messages,
+                    tools=self.tools
+                )
+
+                choice = response.choices[0]
+                message = choice.message
+                message_dict = message.model_dump(exclude_none=True) if hasattr(message, "model_dump") else dict(message)
+
+                # Lưu lại phản hồi của AI vào lịch sử
+                self.messages.append(message_dict)
+
+                # Kiểm tra xem LLM có yêu cầu gọi tool nào không
+                if not message.tool_calls:
+                    return message.content or "Mình chưa tạo được phản hồi cuối cùng. Bạn thử nói rõ hơn giúp mình nhé."
+
                 for tool_call in message.tool_calls:
                     name = tool_call.function.name
                     args_str = tool_call.function.arguments
@@ -47,8 +53,6 @@ class MoniAgent:
                     # Log ra terminal để dễ debug (Developer Mode)
                     print(f"\n[🔧 AI ĐANG GỌI TOOL]: {name}({args})")
                     
-                    # Chúng ta map tên hàm với hàm thực tế trong AGENT_TOOLS
-                    function_map = {tool.__name__: tool for tool in AGENT_TOOLS}
                     if name in function_map:
                         tool_func = function_map[name]
                         # Thực thi tool
@@ -61,19 +65,8 @@ class MoniAgent:
                             "name": name,
                             "content": str(tool_result)
                         })
-                        
-                # Sau khi có kết quả từ các tool, gọi LLM lần nữa để sinh ra câu trả lời cuối
-                second_response = self.provider.generate_response(
-                    messages=self.messages,
-                    tools=self.tools
-                )
-                
-                final_msg = second_response.choices[0].message
-                self.messages.append(final_msg)
-                return final_msg.content
-            
-            # Nếu không gọi tool, trả về câu trả lời bình thường
-            return message.content
+
+            return "Mình đã xử lý nhiều bước nhưng chưa chốt được phản hồi cuối cùng. Bạn thử lại với yêu cầu ngắn hơn nhé."
 
         except Exception as e:
             return f"❌ [Lỗi Hệ Thống]: {str(e)}"
