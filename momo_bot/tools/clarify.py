@@ -1,42 +1,47 @@
 import json
+import os
+import unicodedata
 
-# Mock Data (Danh bạ giả lập)
-MOCK_CONTACTS = {
-    "mẹ": [
-        {"name": "Mẹ (Vina)", "phone": "0912345678"},
-        {"name": "Mẹ vợ", "phone": "0987654321"}
-    ],
-    "vợ": [
-        {"name": "Vợ Yêu", "phone": "0909090909"}
-    ],
-    "long": [
-        {"name": "Hải Long", "phone": "0999888777"},
-        {"name": "Long Cty", "phone": "0977666555"}
-    ]
-}
+def _load_contacts():
+    data_path = os.path.join(os.path.dirname(__file__), "..", "data", "2000_moz.json")
+    with open(data_path, encoding="utf-8") as f:
+        return json.load(f)
+
+_CONTACTS = _load_contacts()
+
+def _normalize(text: str) -> str:
+    """Lowercase + strip diacritics so 'Ngoc' matches 'Ngọc'."""
+    nfkd = unicodedata.normalize("NFKD", text.lower().strip())
+    return "".join(c for c in nfkd if not unicodedata.combining(c))
 
 def clarify_contact(name_hint: str) -> str:
     """
     Công cụ này được sử dụng khi người dùng nhắc đến một tên mơ hồ (ví dụ: 'chuyển cho mẹ', 'chuyển anh Long') mà chưa có số điện thoại cụ thể.
     Nó sẽ tìm kiếm trong danh bạ và trả về các lựa chọn để bạn (AI) hỏi lại người dùng.
-    
+
     Args:
         name_hint: Tên hoặc từ khóa người dùng nhắc tới (ví dụ: 'mẹ', 'long').
     """
-    key = name_hint.lower().strip()
-    
-    # Tìm kiếm gần đúng (chứa từ khóa)
+    key = _normalize(name_hint)
+
     results = []
-    for k, v in MOCK_CONTACTS.items():
-        if key in k or k in key:
-            results.extend(v)
-            
+    for contact in _CONTACTS:
+        name = _normalize(contact["full_name"])
+        if key in name or any(key in part for part in name.split()):
+            results.append({
+                "name": contact["full_name"],
+                "phone": contact["phone_number"],
+                "province": contact["province"]
+            })
+        if len(results) >= 5:
+            break
+
     if not results:
         return json.dumps({
             "status": "not_found",
             "message": f"Không tìm thấy ai tên '{name_hint}' trong danh bạ. Vui lòng hỏi người dùng số điện thoại cụ thể."
         }, ensure_ascii=False)
-        
+
     return json.dumps({
         "status": "success",
         "action": "ask_user_to_choose",
