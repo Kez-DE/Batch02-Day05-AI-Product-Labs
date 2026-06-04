@@ -4,3 +4,7 @@ Thumbs.db
 .idea/
 .vscode/
 momo_bot/.env
+
+# Python
+__pycache__/
+*.py[cod]
