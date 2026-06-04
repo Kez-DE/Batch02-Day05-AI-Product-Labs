@@ -2,9 +2,11 @@ from .clarify import clarify_contact
 from .safety_check import safety_check
 from .momo_next_action import execute_momo_transfer
 from .classify_intent import classify_intent
+from .personal_phonebook import lookup_personal_contact
 
 # Danh sách các tool function
 AGENT_TOOLS = [
+    lookup_personal_contact,
     clarify_contact,
     safety_check,
     execute_momo_transfer,
@@ -13,6 +15,20 @@ AGENT_TOOLS = [
 
 # Định nghĩa JSON Schemas cho OpenAI Function Calling
 TOOL_SCHEMAS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "lookup_personal_contact",
+            "description": "Tra cứu danh bạ cá nhân của chủ tài khoản từ data/phonebook.json. Ưu tiên dùng công cụ này khi người dùng nhắc đến quan hệ hoặc biệt danh cá nhân như 'mẹ', 'bố', 'vợ', 'con trai', 'con gái', '+Q'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name_hint": {"type": "string", "description": "Tên, biệt danh hoặc quan hệ người dùng nhắc tới (ví dụ: 'mẹ', 'vợ', 'con trai')."}
+                },
+                "required": ["name_hint"]
+            }
+        }
+    },
     {
         "type": "function",
         "function": {
@@ -54,6 +70,20 @@ TOOL_SCHEMAS = [
                     "amount": {"type": "integer", "description": "Số tiền muốn chuyển."}
                 },
                 "required": ["phone_number"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "classify_intent",
+            "description": "Phân loại ý định của người dùng khi cần xác định yêu cầu có thuộc luồng chuyển tiền hay không.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Tin nhắn người dùng cần phân loại."}
+                },
+                "required": ["query"]
             }
         }
     }

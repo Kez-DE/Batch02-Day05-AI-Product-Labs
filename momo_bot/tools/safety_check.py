@@ -6,7 +6,26 @@ def _load_contacts():
     with open(data_path, encoding="utf-8") as f:
         return json.load(f)
 
+def _load_phonebook():
+    data_path = os.path.join(os.path.dirname(__file__), "..", "data", "phonebook.json")
+    with open(data_path, encoding="utf-8") as f:
+        return json.load(f)
+
+def _personal_contact_to_account(contact):
+    return {
+        "full_name": contact["full_name"],
+        "phone_number": contact["phone_number"],
+        "account_status": "active",
+        "wallet_verified": True,
+        "risk_level": "low",
+        "source": "personal_phonebook"
+    }
+
 _PHONE_INDEX = {c["phone_number"]: c for c in _load_contacts()}
+_PHONE_INDEX.update({
+    c["phone_number"]: _personal_contact_to_account(c)
+    for c in _load_phonebook()
+})
 
 BLACKLIST_PHONES = ["0123456789", "0999999999"]
 MAX_AMOUNT_NO_OTP = 5000000  # 5 triệu
